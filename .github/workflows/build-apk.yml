@@ -28,7 +28,7 @@ jobs:
         run: |
           echo "Checking Java version..."
           java -version
-          
+
           echo "JAVA_HOME is set to: $JAVA_HOME"
           if [ -z "$JAVA_HOME" ]; then
             echo "ERROR: JAVA_HOME is not set." >&2
@@ -37,8 +37,7 @@ jobs:
 
           JAVA_RAW_VERSION=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}')
           echo "Detected Java version string: $JAVA_RAW_VERSION"
-          
-          # Extract major version number
+
           JAVA_MAJOR=$(echo "$JAVA_RAW_VERSION" | awk -F. '{if ($1 == "1") {print $2} else {print $1}}')
           echo "Active Java major version: $JAVA_MAJOR"
 
@@ -60,6 +59,7 @@ jobs:
           gradle-version: '9.3.1'
 
       - name: Create temporary debug keystore
+        working-directory: android
         run: |
           KEYSTORE_PATH="./debug.keystore"
           if [ -f "$KEYSTORE_PATH" ]; then
@@ -86,11 +86,13 @@ jobs:
           echo "Temporary debug keystore verified at $KEYSTORE_PATH."
 
       - name: Build debug APK
+        working-directory: android
         run: |
           gradle :app:assembleDebug --stacktrace --no-daemon
 
       - name: Verify APK
         id: verify_apk
+        working-directory: android
         run: |
           EXPECTED_APK="app/build/outputs/apk/debug/app-debug.apk"
 
@@ -122,20 +124,20 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
       - name: Prepare APK release asset
         id: prepare_asset
+        working-directory: android
         run: |
           SOURCE_APK="app/build/outputs/apk/debug/app-debug.apk"
           TMP_RELEASE_DIR="${RUNNER_TEMP}/apk-release-asset"
           mkdir -p "$TMP_RELEASE_DIR"
 
-          # Extract repository name safely and sanitize
           REPO_RAW="${GITHUB_REPOSITORY#*/}"
           REPO_SAFE=$(echo "$REPO_RAW" | tr '[:upper:]' '[:lower:]' | sed -e 's/[^a-z0-9._-]/-/g' -e 's/--*/-/g')
-          
+
           if [ -z "$REPO_SAFE" ]; then
             REPO_SAFE="android-app"
           fi
@@ -159,6 +161,7 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
+        working-directory: android
         run: |
           echo "Checking GitHub CLI availability..."
           gh --version
@@ -176,14 +179,14 @@ jobs:
 
           RELEASE_NOTES=$(cat <<EOF
           ### Automatically Generated Debug APK
-          
+
           * **Source:** Built automatically by GitHub Actions
           * **Run Number:** ${GITHUB_RUN_NUMBER}
           * **Run Attempt:** ${GITHUB_RUN_ATTEMPT}
           * **Commit SHA:** \`${GITHUB_SHA}\`
           * **Asset Name:** \`${ASSET_NAME}\`
-          
-          > **Notice:** This APK is an automatically generated debug build intended exclusively for testing and validation. It is not an official production or Play Store release and has been signed with a temporary debug keystore.
+
+          > **Notice:** This APK is an automatically generated debug build intended exclusively for testing and validation. It is not an official production or Play Store release and has been signed with the temporary debug keystore used in the CI workflow.
           EOF
           )
 
@@ -210,9 +213,9 @@ jobs:
             echo "=========================================================="
             echo "  GITHUB RELEASE PUBLISHED SUCCESSFULLY"
             echo "=========================================================="
-            
+
             RELEASE_URL=$(gh release view "$RELEASE_TAG" --json url -q .url 2>/dev/null || echo "https://github.com/${GITHUB_REPOSITORY}/releases/tag/${RELEASE_TAG}")
-            
+
             echo "Release Tag: $RELEASE_TAG"
             echo "Release Title: $RELEASE_TITLE"
             echo "Release URL: $RELEASE_URL"
