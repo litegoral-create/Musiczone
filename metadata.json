@@ -1,0 +1,6 @@
+{
+  "name": "Apple Music Ultra WebView Android APK",
+  "description": "Production-grade Android Native WebView wrapper for Apple Music with 120Hz frame pacing, background audio foreground service, 1GB HTTP cache, and iOS DOM injection.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
